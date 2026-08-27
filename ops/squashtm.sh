@@ -52,7 +52,9 @@ start() {
 }
 
 stop() {
-  pkill -f "$SQUASH_HOME/bundles/squash-tm.war" 2>/dev/null
+  # startup.sh cd vao bin/ nen cmdline chua duong dan TUONG DOI (../bundles/squash-tm.war):
+  # pkill theo duong dan tuyet doi khong bao gio khop -> stop/restart im lang khong lam gi.
+  pkill -f "Dserver\\.port=$HTTP_PORT .*squash-tm\\.war" 2>/dev/null
   rm -f "$PID_FILE"; sleep 3; echo "→ da dung"
 }
 
