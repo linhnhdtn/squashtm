@@ -1,0 +1,33 @@
+<div class="flex-row full-height" sqtmCoreWorkspace="dtn-dashboard">
+  <sqtm-core-nav-bar class="full-height flex-fixed-size"></sqtm-core-nav-bar>
+  <div class="content-wrapper full-width neutral-background-color flex-column overflow-hidden p-b-5">
+    <sqtm-core-configurable-banner />
+    <div class="p-20 overflow-hidden">
+      <div class="flex-row flex-fixed-size full-width">
+        <span style="font-size: 17px; font-weight: 600">DTN Dashboard</span>
+        <button class="m-l-auto" nz-button [nzType]="'primary'" (click)="load()">
+          {{ 'sqtm-core.generic.label.refresh' | translate }}
+        </button>
+      </div>
+
+      @if (summary$ | async; as summary) {
+        <div class="flex-row m-t-20" style="gap: 16px">
+          @for (tile of tiles; track tile.key) {
+            <div class="dtn-tile container-background-color container-border p-15">
+              <div class="dtn-tile-label">{{ tile.label }}</div>
+              <div class="dtn-tile-value">{{ summary[tile.key] }}</div>
+            </div>
+          }
+        </div>
+        <div class="container-background-color container-border m-t-20 p-20 full-width">
+          <div><b>plugin</b> : {{ summary.plugin }}</div>
+          <div><b>server time</b> : {{ summary.time }}</div>
+        </div>
+      } @else {
+        <div class="full-width m-t-20">
+          <sqtm-core-full-page-loading-icon></sqtm-core-full-page-loading-icon>
+        </div>
+      }
+    </div>
+  </div>
+</div>

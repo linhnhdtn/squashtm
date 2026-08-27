@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>DTN Dashboard — Squash TM plugin</title>
+<style>
+  :root {
+    --nav: #1e2536; --nav-hover: #2a3348; --nav-ink: #c7cedd; --nav-ink-active: #fff;
+    --accent: #12b886; --bg: #f0f2f5; --card: #fff; --ink: #1f2430; --muted: #6b7280;
+    --border: #e3e6ec; --nav-w: 200px;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font: 14px/1.5 "Segoe UI", Roboto, sans-serif; color: var(--ink); background: var(--bg);
+    display: grid; grid-template-columns: var(--nav-w) 1fr;
+  }
+
+  /* ---- sidebar: dựng lại nav-bar của Squash, dùng chính asset của core ---- */
+  nav { background: var(--nav); display: flex; flex-direction: column; overflow: hidden; }
+  nav .logo { padding: 14px 16px 18px; }
+  nav .logo img { height: 26px; width: auto; max-width: 100%; object-fit: contain; display: block; }
+  nav a {
+    display: flex; align-items: center; gap: 12px; padding: 11px 16px;
+    color: var(--nav-ink); text-decoration: none; font-size: 13.5px; white-space: nowrap;
+  }
+  nav a:hover { background: var(--nav-hover); color: var(--nav-ink-active); }
+  nav a.active { background: var(--nav-hover); color: var(--nav-ink-active); box-shadow: inset 3px 0 0 var(--accent); }
+  nav a img, nav a svg { width: 18px; height: 18px; filter: invert(85%) sepia(6%) saturate(400%) hue-rotate(190deg); flex: none; }
+  nav a.active img { filter: invert(100%); }
+  nav .sep { height: 1px; background: #2c3550; margin: 8px 16px; }
+  nav .spacer { flex: 1; }
+  nav .foot { padding: 10px 16px 18px; }
+  nav .foot a { padding: 9px 0; font-size: 13px; }
+
+  /* ---- content ---- */
+  main { min-width: 0; display: flex; flex-direction: column; }
+  header {
+    background: var(--card); border-bottom: 1px solid var(--border);
+    padding: 14px 24px; display: flex; align-items: baseline; gap: 12px;
+  }
+  header h1 { margin: 0; font-size: 17px; font-weight: 600; color: #2c3e63; }
+  header .sub { color: var(--muted); font-size: 12px; }
+  header .ctx { margin-left: auto; color: var(--muted); font-size: 12px; }
+  .body { padding: 24px; overflow: auto; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px; margin-bottom: 22px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 16px 18px; }
+  .card .k { color: var(--muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; }
+  .card .v { font-size: 26px; font-weight: 600; margin-top: 4px; }
+  .panel { background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 18px; }
+  .panel h2 { margin: 0 0 14px; font-size: 14px; color: #2c3e63; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+  input { padding: 7px 10px; border: 1px solid #d7dbe3; border-radius: 4px; width: 90px; font: inherit; }
+  button { background: var(--accent); color: #fff; border: 0; border-radius: 4px; padding: 8px 14px; cursor: pointer; font: inherit; }
+  button:hover { filter: brightness(1.07); }
+  pre { background: #11161f; color: #d7e0ef; padding: 14px; border-radius: 6px; overflow: auto; margin: 0; font-size: 12.5px; }
+  .muted { color: var(--muted); font-size: 12px; }
+  /* khi bị nhúng trong iframe (nút CONFIGURE của Squash) thì bỏ sidebar đi cho khỏi trùng */
+  body.embedded { grid-template-columns: 1fr; }
+  body.embedded nav { display: none; }
+</style>
+</head>
+<body>
+<nav>
+  <div class="logo"><img src="/squash/assets/sqtm-core/img/nav-bar/logo_squash30h.png" alt="SquashTM"></div>
+  <a href="/squash/requirement-workspace"   data-i18n="requirement-workspace"><img src="/squash/requirement-workspace.75664e9db5a04fb3.svg" alt="">Requirements</a>
+  <a href="/squash/test-case-workspace"     data-i18n="test-case-workspace"><img src="/squash/test-case-workspace.4e43d76f8e10e495.svg" alt="">Test cases</a>
+  <a href="/squash/campaign-workspace"      data-i18n="campaign-workspace"><img src="/squash/campaign-workspace.eb6fa88822443dd4.svg" alt="">Executions</a>
+  <div class="sep"></div>
+  <a href="/squash/custom-report-workspace" data-i18n="custom-report-workspace"><img src="/squash/custom-report-workspace.58b587b9126c75bb.svg" alt="">Reporting</a>
+  <a href="/squash/automation-workspace"    data-i18n="automation-workspace"><img src="/squash/automation-workspace.3b3a09dcac5da120.svg" alt="">Automation</a>
+  <a href="/squash/action-word-workspace"   data-i18n="action-word-workspace"><img src="/squash/action-word-workspace.aa0b5fba3ef274f1.svg" alt="">Action words</a>
+  <div class="sep"></div>
+  <a href="/squash/plugin/dtn-myfeature/index" class="active"><img src="/squash/custom-report-workspace.58b587b9126c75bb.svg" alt="">DTN Dashboard</a>
+  <div class="spacer"></div>
+  <div class="foot">
+    <a href="/squash/administration-workspace/projects"><img src="/squash/administration-workspace.2c545be9ad32ef5e.svg" alt="">Administration</a>
+    <a href="/squash/home-workspace"><img src="/squash/action-word-workspace.aa0b5fba3ef274f1.svg" alt="">Home</a>
+  </div>
+</nav>
+
+<main>
+  <header>
+    <h1>DTN Dashboard</h1>
+    <span class="sub">plugin dtn-myfeature</span>
+    <span class="ctx" id="ctx"></span>
+  </header>
+  <div class="body">
+    <div class="grid" id="tiles"></div>
+    <div class="panel">
+      <h2>Đếm node theo project</h2>
+      <div class="row">
+        <input id="pid" type="number" value="1" placeholder="projectId">
+        <button onclick="loadProject()">Đếm</button>
+        <span id="pres" class="muted"></span>
+      </div>
+      <pre id="raw">đang tải…</pre>
+    </div>
+  </div>
+</main>
+
+<script>
+const BASE = '/squash/plugin/dtn-myfeature/api';
+const TILES = [['projects','Projects'],['testCases','Test cases'],['executions','Executions'],['requirements','Requirements']];
+
+// Bị nhúng trong iframe (nút CONFIGURE của Squash) -> ẩn sidebar để không trùng nav
+if (window.self !== window.top) document.body.classList.add('embedded');
+
+// Ngữ cảnh cây mà Squash truyền vào qua ?rows=CampaignLibrary-1
+const rows = new URLSearchParams(location.search).get('rows');
+if (rows) document.getElementById('ctx').textContent = 'ngữ cảnh: ' + rows;
+
+/** Lấy nhãn menu từ chính i18n của Squash (kể cả custom_translations) để không lệch khi đổi ngôn ngữ. */
+async function applyI18n() {
+  // Squash chi ship en/fr/de/es; trang nay lang="vi" nen fallback ve en.
+  const supported = ['en', 'fr', 'de', 'es'];
+  const want = (navigator.language || 'en').slice(0, 2);
+  const lang = supported.includes(want) ? want : 'en';
+  const load = async (u) => { try { const r = await fetch(u); return r.ok ? await r.json() : {}; } catch { return {}; } };
+  const [core, custom] = await Promise.all([
+    load(`/squash/assets/sqtm-core/i18n/translations_${lang}.json`),
+    load(`/squash/custom_translations_${lang}.json`),
+  ]);
+  const pick = (d, ws) => d?.['sqtm-core']?.[ws]?.label?.short;
+  document.querySelectorAll('nav a[data-i18n]').forEach((a) => {
+    const ws = a.dataset.i18n;
+    const label = pick(custom, ws) || pick(core, ws);
+    if (label) a.lastChild.textContent = label;
+  });
+}
+
+async function load() {
+  const r = await fetch(BASE + '/summary', { credentials: 'same-origin' });
+  if (!r.ok) { document.getElementById('raw').textContent = 'HTTP ' + r.status; return; }
+  const d = await r.json();
+  document.getElementById('tiles').innerHTML = TILES
+    .map(([k, label]) => `<div class="card"><div class="k">${label}</div><div class="v">${d[k]}</div></div>`)
+    .join('');
+  document.getElementById('raw').textContent = JSON.stringify(d, null, 2);
+}
+
+async function loadProject() {
+  const id = document.getElementById('pid').value;
+  const r = await fetch(`${BASE}/project/${id}/test-cases`, { credentials: 'same-origin' });
+  const d = await r.json();
+  document.getElementById('pres').textContent = r.ok ? JSON.stringify(d) : 'HTTP ' + r.status;
+}
+
+applyI18n();
+load();
+</script>
+</body>
+</html>

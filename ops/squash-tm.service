@@ -1,0 +1,19 @@
+# systemd user unit: tu chay khi dang nhap / khoi dong may.
+#   sed -i "s|__ROOT__|/duong/dan/toi/repo|g" ops/squash-tm.service
+#   cp ops/squash-tm.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload && systemctl --user enable --now squash-tm
+#   sudo loginctl enable-linger $USER      # chay ca khi chua dang nhap desktop
+[Unit]
+Description=Squash TM (DTN custom build)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=__ROOT__
+ExecStart=__ROOT__/ops/squashtm.sh start
+ExecStop=__ROOT__/ops/squashtm.sh stop
+
+[Install]
+WantedBy=default.target

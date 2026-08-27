@@ -1,0 +1,16 @@
+{
+  "name": "squash-tm-dtn",
+  "private": true,
+  "description": "Vo boc de dung quen tay bun/npm; ban chat goi cac script trong ops/",
+  "scripts": {
+    "bootstrap": "./bootstrap.sh",
+    "bootstrap:full": "./bootstrap.sh --with-front",
+    "dev": "./ops/squashtm.sh start",
+    "stop": "./ops/squashtm.sh stop",
+    "restart": "./ops/squashtm.sh restart",
+    "status": "./ops/squashtm.sh status",
+    "logs": "./ops/squashtm.sh logs",
+    "plugin": "./plugin/build.sh --deploy && ./ops/squashtm.sh restart",
+    "front": "./front-patch/apply.sh && ./front-patch/repack-front.sh && ./ops/patch-branding.sh && ./ops/squashtm.sh restart"
+  }
+}

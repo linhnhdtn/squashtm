@@ -1,0 +1,24 @@
+# Postgres cho Squash TM. Co named volume nen `docker compose down` khong mat du lieu
+# (chi mat khi `docker compose down -v`).
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: ${DB_CONTAINER:-squash-tm-postgres}
+    environment:
+      POSTGRES_DB: ${DB_NAME:-squashtm}
+      POSTGRES_USER: ${DB_USER:-squash}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-squash}
+    ports:
+      # bind localhost: khong mo DB ra LAN
+      - "127.0.0.1:${DB_PORT:-5441}:5432"
+    volumes:
+      - squash-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-squash} -d ${DB_NAME:-squashtm}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  squash-db:
+    name: ${DB_CONTAINER:-squash-tm-postgres}-data

@@ -1,0 +1,7 @@
+{
+  "sqtm-core": {
+    "test-case-workspace": { "label": { "short": "Ca kiểm thử (DTN)" } },
+    "campaign-workspace": { "label": { "short": "Lượt chạy test (DTN)" } },
+    "requirement-workspace": { "label": { "short": "Yêu cầu (DTN)" } }
+  }
+}

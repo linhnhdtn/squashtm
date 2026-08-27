@@ -1,0 +1,113 @@
+diff --git a/tm/tm-front/projects/sqtm-app/src/app/app.module.ts b/tm/tm-front/projects/sqtm-app/src/app/app.module.ts
+index 6d10f22..1eacd04 100644
+--- a/tm/tm-front/projects/sqtm-app/src/app/app.module.ts
++++ b/tm/tm-front/projects/sqtm-app/src/app/app.module.ts
+@@ -48,6 +48,12 @@ const routes: Routes = [
+     redirectTo: isDevModeEnabled ? 'login' : '/home-workspace',
+     pathMatch: 'full',
+   },
++  {
++    // DTN: trang rieng nam TRONG SPA (client-side routing, dung nav bar that cua sqtm-core)
++    path: 'dtn-dashboard',
++    loadChildren: () =>
++      import('./pages/dtn-dashboard/dtn-dashboard.module').then((m) => m.DtnDashboardModule),
++  },
+   {
+     path: 'home-workspace',
+     loadChildren: () =>
+diff --git a/tm/tm-front/projects/sqtm-core/src/lib/ui/navbar/containers/nav-bar/nav-bar.component.html b/tm/tm-front/projects/sqtm-core/src/lib/ui/navbar/containers/nav-bar/nav-bar.component.html
+index d5d2cab..f32b271 100644
+--- a/tm/tm-front/projects/sqtm-core/src/lib/ui/navbar/containers/nav-bar/nav-bar.component.html
++++ b/tm/tm-front/projects/sqtm-core/src/lib/ui/navbar/containers/nav-bar/nav-bar.component.html
+@@ -285,6 +285,29 @@
+             </li>
+           }
+         }
++        <!-- DTN: muc menu rieng, tro toi route /dtn-dashboard trong SPA -->
++        <li
++          nz-menu-item
++          nz-tooltip
++          nzTooltipPlacement="right"
++          [attr.data-test-element-id]="'dtn-dashboard-link'"
++          [nzTooltipTitle]="navBarState.collapsed ? 'DTN Dashboard' : ''"
++          [nzSelected]="navBarState.currentWorkspace === 'dtn-dashboard'"
++        >
++          <a
++            title
++            class="nav-bar-title"
++            [sqtmCorePlatformLink]="['/dtn-dashboard']"
++          >
++            <i
++              nz-icon
++              class="font-20-px"
++              [nzType]="'sqtm-core-nav:custom-report-workspace'"
++            >
++            </i>
++            <span>DTN Dashboard</span>
++          </a>
++        </li>
+         <li class="flex-column" style="flex-grow: 1; justify-content: center">
+           <div
+             title
+@@ -705,6 +728,7 @@
+             </a>
+           </li>
+         </ng-template>
++
+       </ul>
+       <!-- Template for the custom submenu -->
+       <ng-template #templatePortalContent>
+diff --git a/tm/tm-front/projects/sqtm-core/src/lib/ui/ui-manager/theme.model.ts b/tm/tm-front/projects/sqtm-core/src/lib/ui/ui-manager/theme.model.ts
+index 7d2f1f7..d0972ca 100644
+--- a/tm/tm-front/projects/sqtm-core/src/lib/ui/ui-manager/theme.model.ts
++++ b/tm/tm-front/projects/sqtm-core/src/lib/ui/ui-manager/theme.model.ts
+@@ -62,6 +62,9 @@ export enum Workspaces {
+   'bugtracker-workspace' = 'bugtracker-workspace',
+   'automation-workspace' = 'automation-workspace',
+   'action-word-workspace' = 'action-word-workspace',
++  // DTN: workspace rieng cho trang /dtn-dashboard. Bat buoc khai bao o day,
++  // vi Theme = { [K in Workspaces]: WorkspaceTheme } nen themes.ts chi nhan key co trong enum nay.
++  'dtn-dashboard' = 'dtn-dashboard',
+ }
+ 
+ export interface Theme extends WorkspaceCssProperties {
+diff --git a/tm/tm-front/projects/sqtm-core/src/lib/ui/ui-manager/themes.ts b/tm/tm-front/projects/sqtm-core/src/lib/ui/ui-manager/themes.ts
+index dca1c82..f36e98f 100644
+--- a/tm/tm-front/projects/sqtm-core/src/lib/ui/ui-manager/themes.ts
++++ b/tm/tm-front/projects/sqtm-core/src/lib/ui/ui-manager/themes.ts
+@@ -69,6 +69,17 @@ export const themes: Theme[] = [
+       'selected-row-color': '#e7c7ff',
+       'box-shadow-color': 'rgba(191, 66, 255, 0.2)',
+     },
++    // DTN: theme cho trang /dtn-dashboard (bat buoc phai co key nay,
++    // WorkspaceDirective throw "No key ... defined in theme" neu thieu)
++    'dtn-dashboard': {
++      'brightest-color': '#20c997',
++      'main-color': '#12b886',
++      'darkest-color': '#0b5d45',
++      'contrast-color': '#ffffff',
++      'hovered-row-color': '#a7f3d096',
++      'selected-row-color': '#a7f3d0',
++      'box-shadow-color': 'rgba(18, 184, 134, 0.2)',
++    },
+     'custom-report-workspace': {
+       'brightest-color': '#da3378',
+       'main-color': '#a2104d',
+@@ -160,6 +171,17 @@ export const themes: Theme[] = [
+       'hovered-row-color': '#F2F4F7',
+       'selected-row-color': '#F2F4F7',
+     },
++    // DTN: theme cho trang /dtn-dashboard (bat buoc phai co key nay,
++    // WorkspaceDirective throw "No key ... defined in theme" neu thieu)
++    'dtn-dashboard': {
++      'brightest-color': '#20c997',
++      'main-color': '#12b886',
++      'darkest-color': '#0b5d45',
++      'contrast-color': '#ffffff',
++      'hovered-row-color': '#a7f3d096',
++      'selected-row-color': '#a7f3d0',
++      'box-shadow-color': 'rgba(18, 184, 134, 0.2)',
++    },
+     'custom-report-workspace': {
+       'brightest-color': '#ff0048',
+       'main-color': '#750021',

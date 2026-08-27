@@ -1,0 +1,16 @@
+# runtime: ban Squash da giai nen, war da patch, DB data, log
+.runtime/
+.cache/
+.env
+*.log
+*.out
+*.pid
+
+# build artifact
+plugin/target/
+front-patch/build/
+
+# IDE
+.idea/
+.vscode/
+*.iml
