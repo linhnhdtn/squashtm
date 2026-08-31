@@ -55,7 +55,7 @@
     !el.classList.contains('ant-select-selection-search-input') &&
     el.closest(HOST);
 
-  let box, input, items = [], cursor = -1, timer, eatEnterKeyup = false;
+  let box, input, items = [], cursor = -1, timer, eatEnterKeyup = false, seq = 0;
 
   function panel() {
     if (box) return box;
@@ -133,13 +133,19 @@
   async function search() {
     const id = testCaseId();
     if (!id || !input || input.value.trim().length < 1) return hide();
+    // Fetch khong bi huy khi go tiep, nen ket qua co the ve khong dung thu tu:
+    // bo qua moi phan hoi khong phai cua lan tim moi nhat.
+    const mine = ++seq;
     try {
       const r = await fetch(`${API(id)}?q=${encodeURIComponent(input.value.trim())}`, { credentials: 'same-origin' });
+      if (mine !== seq) return;
       if (!r.ok) return hide();
-      items = await r.json();
+      const data = await r.json();
+      if (mine !== seq) return;
+      items = data;
       cursor = -1;
       render();
-    } catch (_) { hide(); }
+    } catch (_) { if (mine === seq) hide(); }
   }
 
   document.addEventListener('input', e => {
@@ -171,7 +177,11 @@
     }
   }, true);
 
-  document.addEventListener('focusout', e => { if (e.target === input) setTimeout(hide, 120); }, true);
+  // Angular dung lai o input (vd sau khi them step) lam no focusout roi focus lai ngay. Khong kiem
+  // activeElement thi hide() cham 120ms nay se xoa danh sach vua hien cho nhung ky tu go tiep theo.
+  document.addEventListener('focusout', e => {
+    if (e.target === input) setTimeout(() => { if (document.activeElement !== input) hide(); }, 120);
+  }, true);
   // Capture nen scroll ben trong chinh panel cung toi day: khong loai ra thi lan chuot mot cai la
   // dong bang, khong bao gio xem duoc phan duoi cua danh sach.
   window.addEventListener('scroll', e => { if (!box || !box.contains(e.target)) hide(); }, true);

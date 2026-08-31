@@ -75,6 +75,13 @@ public class DtnMyFeatureController {
     @SuppressWarnings("unchecked")
     public List<Map<String, String>> actionWords(
             @PathVariable long testCaseId, @RequestParam(name = "q", defaultValue = "") String q) {
+        // Narrowing on ACTION_WORD.token first matters: without it every keystroke pulls back every
+        // fragment of every action word in the project and filters them in Java -- fine on a demo
+        // project, thousands of rows on a real one. The token embeds the literal fragment text
+        // ("T-Footer should be visible-") and is uniquely indexed on (token, project_id).
+        // ponytail: a needle straddling a text/parameter boundary ("lbeo <par") is not in the token
+        //           and so is not suggested; assemble() still does the precise match on the result.
+        //
         // Squash runs on PostgreSQL, MariaDB, MySQL and SQL Server, and string concatenation has no
         // spelling common to all four: string_agg is PostgreSQL only, group_concat MySQL only, and
         // '<' || name || '>' silently evaluates as a boolean OR on MariaDB (yielding "0", no error).
@@ -93,12 +100,19 @@ public class DtnMyFeatureController {
                                        on t.action_word_fragment_id = f.action_word_fragment_id
                                 left join ACTION_WORD_PARAMETER p
                                        on p.action_word_fragment_id = f.action_word_fragment_id
+                                where lower(aw.token) like :q
                                 order by 1, 2, 3
                                 """)
                         .setParameter("tcid", testCaseId)
+                        .setParameter("q", "%" + likeLiteral(q.toLowerCase(Locale.ROOT)) + "%")
                         .getResultList();
 
         return assemble(rows, q);
+    }
+
+    /** Escapes the LIKE metacharacters so a query such as "50%" is matched literally. */
+    private static String likeLiteral(String s) {
+        return s.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 
     /**

@@ -54,6 +54,20 @@ GRANT alter_squash_table_seq TO '$DB_USER'@'%';
 SET DEFAULT ROLE alter_squash_table_seq FOR '$DB_USER'@'%';
 SQL
 
+# Dump tu live co 2 view (EXECUTION_ISSUES_CLOSURE, RLN_RESOURCE) tao voi
+# DEFINER='squashtm'@'%' — ten DB user cua live. View la SQL SECURITY DEFINER nen
+# thieu user do la MariaDB tra ve "ERROR 1045 Access denied for user '$DB_USER'@'%'"
+# (thong bao lech, de tuong sai mat khau); UI chi hien "This item is unavailable".
+# Tao san user rong lam definer -> import dump live vao local khong con loi nay.
+# App van connect bang $DB_USER, user duoi day khong dung de dang nhap.
+LIVE_DB_USER=squashtm
+if [[ "$LIVE_DB_USER" != "$DB_USER" ]]; then
+  mdbroot <<SQL
+CREATE USER IF NOT EXISTS '$LIVE_DB_USER'@'%' IDENTIFIED BY 'definer-only-not-for-login';
+GRANT SELECT ON \`$DB_NAME\`.* TO '$LIVE_DB_USER'@'%';
+SQL
+fi
+
 # MariaDB tren Linux phan biet hoa thuong ten bang, Squash tao bang chu HOA -> upper()
 if ! echo "select 1 from information_schema.tables
             where table_schema='$DB_NAME' and upper(table_name)='CORE_CONFIG'" | mdb | grep -q 1; then
