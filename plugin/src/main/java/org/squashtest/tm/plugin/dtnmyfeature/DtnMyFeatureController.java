@@ -3,8 +3,11 @@ package org.squashtest.tm.plugin.dtnmyfeature;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +28,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/plugin/dtn-myfeature/api")
 @PreAuthorize("hasRole('ROLE_TM_USER') or hasRole('ROLE_ADMIN')")
 public class DtnMyFeatureController {
+
+    private static final int MAX_SUGGESTIONS = 15;
 
     @PersistenceContext private EntityManager em;
 
@@ -57,51 +62,70 @@ public class DtnMyFeatureController {
     }
 
     /**
-     * Action word suggestions for the BDD step editor.
+     * Step suggestions for the BDD test case editor.
      *
      * <p>Squash ships this feature already (POST /backend/keyword-test-cases/autocomplete) but its
      * controller takes an Optional&lt;ActionWordService&gt; whose only implementation lives in the
      * proprietary premium plugin; without it the endpoint throws AccessDeniedException and the front
      * end falls back to a plain text input. The ACTION_WORD tables are core schema and already
      * populated by every step typed, so we read them directly.
-     *
-     * <p>An action word carries no keyword of its own (GIVEN/WHEN/... lives on KEYWORD_TEST_STEP), and
-     * the same wording is commonly reused under several of them. We therefore suggest distinct
-     * (keyword, action) pairs -- "But lbeo3" and "Given lbeo3" are two separate suggestions -- so
-     * picking one restores the whole step, keyword included.
      */
     @GetMapping("/test-case/{testCaseId}/action-words")
     @Transactional(readOnly = true)
     @SuppressWarnings("unchecked")
     public List<Map<String, String>> actionWords(
             @PathVariable long testCaseId, @RequestParam(name = "q", defaultValue = "") String q) {
-        // ponytail: string_agg/ilike are PostgreSQL only, port to group_concat/lower(..) like if MariaDB is ever used
+        // Squash runs on PostgreSQL, MariaDB, MySQL and SQL Server, and string concatenation has no
+        // spelling common to all four: string_agg is PostgreSQL only, group_concat MySQL only, and
+        // '<' || name || '>' silently evaluates as a boolean OR on MariaDB (yielding "0", no error).
+        // So the query stays plain SQL-92 and the fragments are stitched together in Java below.
         List<Object[]> rows =
                 em.createNativeQuery(
                                 """
-                                select distinct kts.keyword, s.action
+                                select distinct kts.keyword, f.action_word_id, f.fragment_order,
+                                       t.text, p.name
                                 from KEYWORD_TEST_STEP kts
-                                join (
-                                  select aw.action_word_id as id,
-                                         string_agg(coalesce(t.text, '<' || p.name || '>'), '' order by f.fragment_order) as action
-                                  from ACTION_WORD aw
-                                  join ACTION_WORD_FRAGMENT f on f.action_word_id = aw.action_word_id
-                                  left join ACTION_WORD_TEXT t on t.action_word_fragment_id = f.action_word_fragment_id
-                                  left join ACTION_WORD_PARAMETER p on p.action_word_fragment_id = f.action_word_fragment_id
-                                  where aw.project_id = (select project_id from TEST_CASE_LIBRARY_NODE where tcln_id = :tcid)
-                                  group by aw.action_word_id
-                                ) s on s.id = kts.action_word_id
-                                where s.action ilike :q
-                                order by 2, 1
-                                limit 15
+                                join ACTION_WORD aw on aw.action_word_id = kts.action_word_id
+                                 and aw.project_id =
+                                     (select project_id from TEST_CASE_LIBRARY_NODE where tcln_id = :tcid)
+                                join ACTION_WORD_FRAGMENT f on f.action_word_id = aw.action_word_id
+                                left join ACTION_WORD_TEXT t
+                                       on t.action_word_fragment_id = f.action_word_fragment_id
+                                left join ACTION_WORD_PARAMETER p
+                                       on p.action_word_fragment_id = f.action_word_fragment_id
+                                order by 1, 2, 3
                                 """)
                         .setParameter("tcid", testCaseId)
-                        .setParameter("q", "%" + q + "%")
                         .getResultList();
 
-        return rows.stream()
-                .map(r -> Map.of("keyword", (String) r[0], "action", (String) r[1]))
-                .toList();
+        return assemble(rows, q);
+    }
+
+    /**
+     * Folds the fragment rows -- (keyword, action word id, fragment order, text, parameter name),
+     * already ordered by those first three -- into the suggestion list the front end expects.
+     *
+     * <p>Package private so the self-check in src/test can exercise it without a database.
+     */
+    static List<Map<String, String>> assemble(List<Object[]> rows, String q) {
+        Map<List<Object>, StringBuilder> actions = new LinkedHashMap<>();
+        for (Object[] r : rows) {
+            String fragment = r[3] != null ? (String) r[3] : "<" + r[4] + ">";
+            actions.computeIfAbsent(List.of(r[0], r[1]), k -> new StringBuilder()).append(fragment);
+        }
+
+        String needle = q.toLowerCase(Locale.ROOT);
+        List<Map<String, String>> found = new ArrayList<>();
+        actions.forEach(
+                (key, action) -> {
+                    if (action.toString().toLowerCase(Locale.ROOT).contains(needle)) {
+                        found.add(Map.of("keyword", (String) key.get(0), "action", action.toString()));
+                    }
+                });
+        found.sort(
+                Comparator.comparing((Map<String, String> m) -> m.get("action"))
+                        .thenComparing(m -> m.get("keyword")));
+        return found.size() > MAX_SUGGESTIONS ? found.subList(0, MAX_SUGGESTIONS) : found;
     }
 
     private long count(String table) {

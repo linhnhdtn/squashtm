@@ -11,11 +11,13 @@ Repo **chỉ chứa source + script**. Bộ cài Squash TM (342 MB) và frontend
 | | |
 |---|---|
 | **JDK 21** | bắt buộc — `startup.sh` của Squash chặn Java thấp hơn. Khai đường dẫn trong `.env` (`JAVA_HOME`) |
-| **Docker** + compose plugin | chạy PostgreSQL |
+| **Docker** + compose plugin | chạy MariaDB (khớp với hệ thống live) |
 | `curl`, `unzip`, `zip`, `tar` | bootstrap và patch war |
 | *(chỉ khi build frontend)* **Node 22 + yarn 1.x** | `yarn install` ~1.1 GB, build ~5 phút |
 
 Squash TM 13 **không còn hỗ trợ H2** — validator chỉ nhận `jdbc:postgresql://` hoặc `jdbc:mariadb://`.
+
+Repo chạy **MariaDB** cho khớp với hệ thống live. Đổi `DB_IMAGE` trong `.env` cho trùng phiên bản MariaDB bên live. Muốn quay lại PostgreSQL thì `git revert` commit chuyển đổi — volume `squash-tm-postgres-data` vẫn còn nguyên.
 
 ---
 
@@ -65,7 +67,7 @@ front-patch/                Phần Angular (chỉ patch, không commit jar build
 ops/
   squashtm.sh               start/stop/status/logs
   patch-branding.sh         chèn custom.js vào index.html của SPA
-  docker-compose.yml        Postgres, có named volume, bind 127.0.0.1
+  docker-compose.yml        MariaDB, có named volume, bind 127.0.0.1
   squash-tm.service         systemd user unit (tự chạy khi bật máy)
 conf/lang/                  việt hoá nhãn UI (custom_translations_*.json)
 .runtime/  .cache/          sinh ra lúc bootstrap — đã gitignore
@@ -96,6 +98,9 @@ Chưa chạy `make front` thì `/squash/dtn-dashboard` trả về vỏ SPA nhưn
 | `/plugin/**` **không** được Squash auth | endpoint plugin phải tự `@PreAuthorize`, nếu không là public |
 | Route SPA phải khai ở Java (`AngularAppPageUrls` của core) | thiếu → gõ URL/F5 bị **404**; đã xử lý bằng `DtnMyFeatureWebMvcConfig` + `DtnSpaShellSecurityExemption` trong plugin |
 | `squash.db.update-mode` | chỉ nhận `interactive / only / forced / disabled` — **không có** `auto` |
+| MariaDB: role `alter_squash_table_seq` phải tạo **trước** khi nạp schema | script install có ~200 dòng `GRANT ALL ON <seq> TO alter_squash_table_seq` → thiếu role thì nạp chết giữa chừng, app báo `The role 'alter_squash_table_seq' does not exist` rồi không lên |
+| MariaDB: nạp schema bằng **root**, không phải user Squash | user do `MARIADB_USER` tạo không có `GRANT OPTION` → các lệnh `GRANT` trong script bị từ chối |
+| Dùng `MYSQL_PWD` thay `-p...` | `-p` sinh cảnh báo ra stderr → phải `2>/dev/null` → nuốt luôn lỗi thật, schema hỏng mà vẫn báo thành công |
 | Sửa `index.html`/`custom.js`/i18n mà không thấy đổi | static bị cache 7 ngày → để `STATIC_CACHE=0` khi dev, hoặc Ctrl+Shift+R |
 
 ---

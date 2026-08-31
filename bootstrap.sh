@@ -34,17 +34,35 @@ fi
 # 2) database
 echo "→ database"
 (cd ops && docker compose --env-file "$ROOT/.env" up -d)
-until docker exec "$DB_CONTAINER" pg_isready -U "$DB_USER" -d "$DB_NAME" >/dev/null 2>&1; do sleep 2; done
+until docker exec "$DB_CONTAINER" mariadb-admin ping -h 127.0.0.1 \
+        -u"$DB_USER" -p"$DB_PASSWORD" --silent >/dev/null 2>&1; do sleep 2; done
 
 # 3) schema (chi nap lan dau — nhan biet qua bang CORE_CONFIG)
-if ! docker exec "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -tAc \
-     "select 1 from information_schema.tables where table_name='core_config'" | grep -q 1; then
-  SQL=$(ls "$SQUASH_HOME"/database-scripts/postgresql-full-install-*.sql | head -1)
+# MYSQL_PWD thay cho -p...: khong lo mat khau tren cmdline VA khong sinh canh bao ra stderr,
+# nho vay giu duoc stderr de thay loi that (nuot stderr thi schema hong ma van bao thanh cong).
+mdb()     { docker exec -i -e MYSQL_PWD="$DB_PASSWORD"      "$DB_CONTAINER" mariadb -u"$DB_USER" -N -B "$DB_NAME"; }
+mdbroot() { docker exec -i -e MYSQL_PWD="$DB_ROOT_PASSWORD" "$DB_CONTAINER" mariadb -uroot     -N -B "$@"; }
+
+# Squash TM 10+ tren MariaDB doi role 'alter_squash_table_seq' PHAI co truoc khi nap schema:
+# script install chua ~200 dong `GRANT ALL ON <seq> TO alter_squash_table_seq`. Thieu role thi
+# nap schema chet giua chung. App con tu kiem lai luc khoi dong:
+#   select 1 from information_schema.applicable_roles
+#   where ROLE_NAME='alter_squash_table_seq' and IS_DEFAULT='YES'
+mdbroot <<SQL
+CREATE ROLE IF NOT EXISTS alter_squash_table_seq;
+GRANT alter_squash_table_seq TO '$DB_USER'@'%';
+SET DEFAULT ROLE alter_squash_table_seq FOR '$DB_USER'@'%';
+SQL
+
+# MariaDB tren Linux phan biet hoa thuong ten bang, Squash tao bang chu HOA -> upper()
+if ! echo "select 1 from information_schema.tables
+            where table_schema='$DB_NAME' and upper(table_name)='CORE_CONFIG'" | mdb | grep -q 1; then
+  SQL=$(ls "$SQUASH_HOME"/database-scripts/mariadb-full-install-*.sql | head -1)
   echo "→ nap schema: $(basename "$SQL")"
-  docker cp "$SQL" "$DB_CONTAINER":/tmp/install.sql
-  docker exec "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -q -o /dev/null -f /tmp/install.sql
-  echo "   $(docker exec "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -tAc \
-        "select count(*) from information_schema.tables where table_schema='public'") bang"
+  # nap bang root: user Squash khong co GRANT OPTION nen khong chay duoc cac lenh GRANT trong script
+  mdbroot "$DB_NAME" < "$SQL" > /dev/null
+  echo "   $(echo "select count(*) from information_schema.tables
+                   where table_schema='$DB_NAME'" | mdb) bang"
 else
   echo "→ schema da co, bo qua"
 fi

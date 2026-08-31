@@ -67,7 +67,8 @@
       'font:13px/1.6 "Segoe UI",sans-serif;min-width:240px';
     box.addEventListener('mousedown', e => {          // mousedown: chay truoc blur cua input
       const li = e.target.closest('[data-i]');
-      if (li) { e.preventDefault(); pick(+li.dataset.i); }
+      e.preventDefault();                             // giu focus tren input, ke ca khi keo thanh cuon
+      if (li) pick(+li.dataset.i);
     });
     document.body.appendChild(box);
     return box;
@@ -88,6 +89,7 @@
     p.style.top = r.bottom + 2 + 'px';
     p.style.minWidth = r.width + 'px';
     p.style.display = 'block';
+    if (cursor >= 0) p.children[cursor].scrollIntoView({ block: 'nearest' });
   }
 
   /**
@@ -170,5 +172,7 @@
   }, true);
 
   document.addEventListener('focusout', e => { if (e.target === input) setTimeout(hide, 120); }, true);
-  window.addEventListener('scroll', hide, true);
+  // Capture nen scroll ben trong chinh panel cung toi day: khong loai ra thi lan chuot mot cai la
+  // dong bang, khong bao gio xem duoc phan duoi cua danh sach.
+  window.addEventListener('scroll', e => { if (!box || !box.contains(e.target)) hide(); }, true);
 })();

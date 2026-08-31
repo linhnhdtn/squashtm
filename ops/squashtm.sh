@@ -14,8 +14,8 @@ LOG_FILE="$ROOT/.runtime/squash-tm.out"
 JAVA_OPTS=(
   "-Dserver.address=$BIND_ADDRESS"
   "-Dserver.port=$HTTP_PORT"
-  "-Dspring.profiles.active=postgresql"
-  "-Dspring.datasource.url=jdbc:postgresql://localhost:$DB_PORT/$DB_NAME"
+  "-Dspring.profiles.active=mariadb"
+  "-Dspring.datasource.url=jdbc:mariadb://localhost:$DB_PORT/$DB_NAME"
   "-Dspring.datasource.username=$DB_USER"
   "-Dspring.datasource.password=$DB_PASSWORD"
   # chi nhan: interactive | only | forced | disabled  (KHONG co 'auto')
@@ -33,7 +33,8 @@ start() {
   if ! docker ps --format '{{.Names}}' | grep -qx "$DB_CONTAINER"; then
     echo "→ khoi dong database"
     (cd ops && docker compose --env-file "$ROOT/.env" up -d) >/dev/null
-    until docker exec "$DB_CONTAINER" pg_isready -U "$DB_USER" -d "$DB_NAME" >/dev/null 2>&1; do sleep 2; done
+    until docker exec "$DB_CONTAINER" mariadb-admin ping -h 127.0.0.1 \
+            -u"$DB_USER" -p"$DB_PASSWORD" --silent >/dev/null 2>&1; do sleep 2; done
   fi
 
   echo "→ khoi dong Squash TM ($BIND_ADDRESS:$HTTP_PORT)"

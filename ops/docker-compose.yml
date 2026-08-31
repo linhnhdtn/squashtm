@@ -1,24 +1,31 @@
-# Postgres cho Squash TM. Co named volume nen `docker compose down` khong mat du lieu
+# MariaDB cho Squash TM — khop voi he thong live.
+# Co named volume nen `docker compose down` khong mat du lieu
 # (chi mat khi `docker compose down -v`).
 services:
   db:
-    image: postgres:16-alpine
-    container_name: ${DB_CONTAINER:-squash-tm-postgres}
+    # doi DB_IMAGE trong .env cho trung phien ban MariaDB tren live
+    image: ${DB_IMAGE:-mariadb:11.4}
+    container_name: ${DB_CONTAINER:-squash-tm-mariadb}
+    # Squash TM luu tieng Viet trong ten test case / step -> phai utf8mb4
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
     environment:
-      POSTGRES_DB: ${DB_NAME:-squashtm}
-      POSTGRES_USER: ${DB_USER:-squash}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-squash}
+      MARIADB_DATABASE: ${DB_NAME:-squashtm}
+      MARIADB_USER: ${DB_USER:-squash}
+      MARIADB_PASSWORD: ${DB_PASSWORD:-squash}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
     ports:
       # bind localhost: khong mo DB ra LAN
-      - "127.0.0.1:${DB_PORT:-5441}:5432"
+      - "127.0.0.1:${DB_PORT:-3341}:3306"
     volumes:
-      - squash-db:/var/lib/postgresql/data
+      - squash-db:/var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-squash} -d ${DB_NAME:-squashtm}"]
+      test: ["CMD-SHELL", "mariadb-admin ping -h 127.0.0.1 -u$$MARIADB_USER -p$$MARIADB_PASSWORD --silent"]
       interval: 5s
       timeout: 5s
       retries: 20
 
 volumes:
   squash-db:
-    name: ${DB_CONTAINER:-squash-tm-postgres}-data
+    name: ${DB_CONTAINER:-squash-tm-mariadb}-data
