@@ -36,7 +36,7 @@ class DtnMenuItem implements MenuItem {
 
     @Override
     public String getTooltip() {
-        return "Bang dieu khien noi bo DTN";
+        return "DTN internal dashboard";
     }
 
     @Override

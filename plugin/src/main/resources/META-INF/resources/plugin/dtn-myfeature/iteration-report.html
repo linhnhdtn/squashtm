@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Iteration run history — Squash TM plugin</title>
+<style>
+  :root {
+    --nav: #1e2536; --nav-hover: #2a3348; --nav-ink: #c7cedd; --nav-ink-active: #fff;
+    --accent: #12b886; --bg: #f0f2f5; --card: #fff; --ink: #1f2430; --muted: #6b7280;
+    --border: #e3e6ec;
+    --ok: #37b24d; --bad: #e03131; --err: #a61e4d; --cancel: #adb5bd;
+    --run: #1c7ed6; --ready: #dee2e6; --blocked: #f76707; --none: #f1f3f5;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font: 14px/1.5 "Segoe UI", Roboto, sans-serif; color: var(--ink); background: var(--bg);
+    display: flex; flex-direction: column;
+  }
+
+
+  main { min-width: 0; display: flex; flex-direction: column; }
+  header {
+    background: var(--card); border-bottom: 1px solid var(--border);
+    padding: 14px 24px; display: flex; align-items: baseline; gap: 12px;
+  }
+  header h1 { margin: 0; font-size: 17px; font-weight: 600; color: #2c3e63; }
+  header .back { color: var(--muted); text-decoration: none; font-size: 19px; line-height: 1; padding-right: 2px; }
+  header .back:hover { color: var(--ink); }
+  header .sub { color: var(--muted); font-size: 12px; }
+  header .ctx { margin-left: auto; color: var(--muted); font-size: 12px; }
+  .body { padding: 20px 24px 40px; overflow: auto; }
+
+  .panel { background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 16px 18px; margin-bottom: 18px; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  label.f { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); }
+  select, input[type=number] { padding: 6px 8px; border: 1px solid #d7dbe3; border-radius: 4px; font: inherit; background: #fff; }
+  select { max-width: 460px; }
+  select.narrow { max-width: 210px; }
+  input[type=number] { width: 72px; }
+  button { background: var(--accent); color: #fff; border: 0; border-radius: 4px; padding: 7px 13px; cursor: pointer; font: inherit; }
+  button.ghost { background: #fff; color: var(--ink); border: 1px solid #d7dbe3; }
+  button:hover { filter: brightness(1.05); }
+  button:disabled { opacity: .5; cursor: default; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-bottom: 18px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; }
+  .card .k { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
+  .card .v { font-size: 23px; font-weight: 600; margin-top: 3px; }
+  .card .v small { font-size: 12px; font-weight: 400; color: var(--muted); }
+
+  .tablewrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { border-bottom: 1px solid var(--border); padding: 7px 9px; text-align: left; white-space: nowrap; }
+  th { background: #f7f8fa; font-weight: 600; font-size: 12px; color: #2c3e63; position: sticky; top: 0; cursor: pointer; user-select: none; }
+  th.num, td.num { text-align: right; }
+  td.tc { white-space: normal; min-width: 260px; max-width: 460px; }
+  tr:hover td { background: #fbfcfe; }
+
+  .spark { display: flex; gap: 2px; }
+  .spark i { width: 9px; height: 16px; border-radius: 2px; display: block; background: var(--none); }
+  .spark i.SUCCESS { background: var(--ok); }
+  .spark i.FAILURE { background: var(--bad); }
+  .spark i.ERROR { background: var(--err); }
+  .spark i.CANCELLED { background: var(--cancel); }
+  .spark i.RUNNING { background: var(--run); }
+  .spark i.READY { background: var(--ready); }
+  .spark i.BLOCKED { background: var(--blocked); }
+  .spark i.env { outline: 2px solid #862e9c; outline-offset: 1px; }
+  .spark a { display: block; }
+
+  .tag { font-size: 11.5px; padding: 2px 7px; border-radius: 10px; white-space: nowrap; }
+  .tag.stable { background: #ebfbee; color: #2b8a3e; }
+  .tag.recovered { background: #e7f5ff; color: #1971c2; }
+  .tag.regression { background: #fff4e6; color: #d9480f; }
+  .tag.flaky { background: #fff9db; color: #a37200; }
+  .tag.broken { background: #fff5f5; color: #c92a2a; }
+  .tag.not-run { background: #f1f3f5; color: var(--muted); }
+
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 11.5px; color: var(--muted); margin-top: 10px; }
+  .legend span { display: flex; align-items: center; gap: 5px; }
+  .legend i { width: 9px; height: 12px; border-radius: 2px; display: block; }
+  .note { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .warn { background: #fff9db; border: 1px solid #ffe066; color: #6b5200; padding: 9px 12px; border-radius: 5px; font-size: 12.5px; margin-bottom: 14px; }
+</style>
+</head>
+<body>
+
+<main>
+  <header>
+    <a class="back" href="/squash/campaign-workspace" target="_top" title="Back to Squash">&#8592;</a>
+    <h1>Iteration run history</h1>
+    <span class="sub">test case &times; automated run</span>
+    <span class="ctx" id="ctx"></span>
+  </header>
+  <div class="body">
+    <div class="panel">
+      <div class="row" style="margin-bottom:10px">
+        <label class="f">Project
+          <select id="fProject" class="narrow"></select>
+        </label>
+        <label class="f">Folder level 1
+          <select id="fFolder1" class="narrow"></select>
+        </label>
+        <label class="f">Folder level 2
+          <select id="fFolder2" class="narrow"></select>
+        </label>
+        <button id="fClear" class="ghost">Clear filters</button>
+      </div>
+      <div class="row">
+        <label class="f">Iteration
+          <select id="iter"><option value="">loading…</option></select>
+        </label>
+        <label class="f">Runs shown
+          <input id="runs" type="number" min="1" max="300" value="30">
+        </label>
+        <label class="f"><input id="onlyBad" type="checkbox"> failing test cases only</label>
+        <button id="reload">Load</button>
+        <button id="csv" class="ghost" disabled>Export CSV</button>
+        <span id="status" class="note" style="margin:0"></span>
+      </div>
+      <div class="note" id="pickHint"></div>
+    </div>
+
+    <div id="envWarn"></div>
+    <div class="grid" id="tiles"></div>
+
+    <div class="panel">
+      <div class="tablewrap"><table id="tbl">
+        <thead><tr id="head"></tr></thead>
+        <tbody id="rows"><tr><td>Pick an iteration, then hit Load.</td></tr></tbody>
+      </table></div>
+      <div class="legend" id="legend"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+const BASE = '/squash/plugin/dtn-myfeature/api';
+const LS = 'dtn-iteration-report';
+const STATUSES = ['SUCCESS','FAILURE','ERROR','BLOCKED','CANCELLED','RUNNING','READY'];
+const TREND = {
+  'stable': 'stable', 'recovered': 'recovered', 'regression': '⚠ regression',
+  'flaky': '⚠ flaky', 'broken': '✗ broken', 'not-run': 'not run',
+};
+const COLS = [
+  ['testCase',  'Test case',  'tc'],
+  ['dataset',   'Dataset',    ''],
+  ['runs',      'Runs',       'num'],
+  ['ok',        'OK',         'num'],
+  ['bad',       'Failed',     'num'],
+  ['okRate',    '% OK',       'num'],
+  ['trend',     'Trend',      ''],
+];
+
+let allIters = [];                   // every /iterations entry; the filtering happens client side
+let want = {};                       // filter values for the next applyFilters(), restored from localStorage
+let data = null;                     // the /run-history payload
+let sort = { key: 'bad', desc: true };
+let reqSeq = 0;                      // switching iteration/runs fast -> drop the stale response
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+const uniq = (xs) => [...new Set(xs.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'vi'));
+
+function savedState() { try { return JSON.parse(localStorage.getItem(LS) || '{}'); } catch (_) { return {}; } }
+function saveState(patch) { localStorage.setItem(LS, JSON.stringify({ ...savedState(), ...patch })); }
+
+async function get(path) {
+  const r = await fetch(BASE + path, { credentials: 'same-origin' });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+
+async function loadIterations() {
+  allIters = await get('/iterations');
+  const saved = savedState();
+  want = { project: saved.project, folder1: saved.folder1, folder2: saved.folder2 };
+  applyFilters();
+  if (saved.runs) $('runs').value = saved.runs;
+  if (saved.onlyBad) $('onlyBad').checked = true;
+  if (saved.iterationId && $('iter').value) load();
+}
+
+/**
+ * Rebuilds one filter dropdown and reports the value it ended up on.
+ *
+ * `keep` survives only if the narrowed data still offers it -- picking another project must not
+ * leave a folder selected that does not exist there, which would show an empty list.
+ */
+function fillSelect(el, values, keep) {
+  const value = values.includes(keep) ? keep : '';
+  el.innerHTML = '<option value="">— all —</option>' + values.map((v) =>
+    `<option value="${esc(v)}"${v === value ? ' selected' : ''}>${esc(v)}</option>`).join('');
+  el.disabled = values.length === 0;
+  return value;
+}
+
+/**
+ * Narrows the iteration list by project then folder. 379 iterations across 18 projects is far too
+ * many to scan in one dropdown, and they are already all in memory, so the filtering is done here
+ * rather than by asking the server again.
+ *
+ * Each dropdown is rebuilt from what the ones before it left, so only reachable choices are ever
+ * offered.
+ */
+function applyFilters() {
+  const project = fillSelect($('fProject'), uniq(allIters.map((i) => i.project)),
+    want.project ?? $('fProject').value);
+  const byProject = allIters.filter((i) => !project || i.project === project);
+
+  const folder1 = fillSelect($('fFolder1'), uniq(byProject.map((i) => i.folders[0])),
+    want.folder1 ?? $('fFolder1').value);
+  const byFolder1 = byProject.filter((i) => !folder1 || i.folders[0] === folder1);
+
+  const folder2 = fillSelect($('fFolder2'), uniq(byFolder1.map((i) => i.folders[1])),
+    want.folder2 ?? $('fFolder2').value);
+  const shown = byFolder1.filter((i) => !folder2 || i.folders[1] === folder2);
+
+  want = {};
+  saveState({ project, folder1, folder2 });
+
+  // The server sorted by suite count already, so the ones worth opening come first.
+  const selected = String(savedState().iterationId || '');
+  $('iter').innerHTML = '<option value="">— pick an iteration —</option>' + shown.map((i) =>
+    `<option value="${i.iterationId}"${String(i.iterationId) === selected ? ' selected' : ''}>`
+    + [i.project, ...i.folders, i.campaign, i.iteration].map(esc).join(' › ')
+    + `  (${i.suites} runs, ${i.items} TC)</option>`).join('');
+
+  const withRuns = shown.filter((i) => i.suites > 1).length;
+  $('pickHint').textContent = shown.length === allIters.length
+    ? `${allIters.length} iterations readable, ${withRuns} re-run more than once (listed first).`
+    : `${shown.length}/${allIters.length} iterations match the filters, ${withRuns} re-run more than once.`;
+}
+
+async function load() {
+  const id = $('iter').value;
+  if (!id) return;
+  const runs = Math.max(1, Math.min(300, Number($('runs').value) || 30));
+  saveState({ iterationId: id, runs, onlyBad: $('onlyBad').checked });
+  $('status').textContent = 'loading…';
+  $('csv').disabled = true;
+  const seq = ++reqSeq;
+  let payload;
+  try {
+    payload = await get(`/iteration/${id}/run-history?runs=${runs}`);
+  } catch (e) {
+    if (seq === reqSeq) $('status').textContent = 'error: ' + e.message;
+    return;
+  }
+  if (seq !== reqSeq) return;        // a newer request is already out, drop this answer
+  data = payload;
+  $('status').textContent = '';
+  $('ctx').textContent = `${data.project} › ${data.campaign} › ${data.iteration}`;
+  $('csv').disabled = data.rows.length === 0;
+  render();
+}
+
+function visibleRows() {
+  const rows = data.rows
+    .map((r) => ({ ...r, okRate: r.runs ? Math.round((100 * r.ok) / r.runs) : 0 }))
+    .filter((r) => !$('onlyBad').checked || r.bad > 0);
+  const k = sort.key;
+  rows.sort((a, b) => {
+    const x = a[k], y = b[k];
+    const c = typeof x === 'number' && typeof y === 'number'
+      ? x - y : String(x ?? '').localeCompare(String(y ?? ''));
+    return sort.desc ? -c : c;
+  });
+  return rows;
+}
+
+function render() {
+  const env = new Set(data.environmentFailures);
+  const rows = visibleRows();
+
+  const totalRuns = data.rows.reduce((s, r) => s + r.runs, 0);
+  const totalBad = data.rows.reduce((s, r) => s + r.bad, 0);
+  const broken = data.rows.filter((r) => r.bad > 0).length;
+  $('tiles').innerHTML = [
+    ['Test cases', `${data.rows.length}`, `${broken} failing`],
+    ['Runs stored', `${data.suites.length}`, `${data.window} columns shown`],
+    ['Executions', `${totalRuns}`, `${totalBad} failed`],
+    ['OK rate', totalRuns ? `${Math.round((100 * (totalRuns - totalBad)) / totalRuns)}%` : '—', ''],
+  ].map(([k, v, s]) => `<div class="card"><div class="k">${k}</div><div class="v">${v} <small>${esc(s)}</small></div></div>`).join('');
+
+  $('envWarn').innerHTML = env.size === 0 ? '' :
+    `<div class="warn"><b>${env.size} runs where every test case failed</b> — almost certainly an
+     environment outage, not ${data.rows.length} bugs. Those columns are outlined purple in the sparkline.</div>`;
+
+  $('head').innerHTML = COLS.map(([k, label, cls]) =>
+    `<th class="${cls}" data-k="${k}">${label}${sort.key === k ? (sort.desc ? ' ▾' : ' ▴') : ''}</th>`).join('')
+    + `<th>${data.window} most recent runs → older</th>`;
+
+  $('rows').innerHTML = rows.length === 0
+    ? '<tr><td colspan="8">No rows.</td></tr>'
+    : rows.map((r) => `<tr>
+        <td class="tc">${r.reference ? `<b>${esc(r.reference)}</b> ` : ''}${esc(r.testCase)}</td>
+        <td>${esc(r.dataset || '—')}</td>
+        <td class="num">${r.runs}</td>
+        <td class="num">${r.ok}</td>
+        <td class="num">${r.bad}</td>
+        <td class="num">${r.okRate}%</td>
+        <td><span class="tag ${r.trend}">${TREND[r.trend] || r.trend}</span></td>
+        <td>${spark(r, env)}</td>
+      </tr>`).join('');
+
+  $('legend').innerHTML = STATUSES.map((s) =>
+    `<span><i class="${s}" style="background:var(--${{ SUCCESS: 'ok', FAILURE: 'bad', ERROR: 'err', BLOCKED: 'blocked', CANCELLED: 'cancel', RUNNING: 'run', READY: 'ready' }[s]})"></i>${s}</span>`).join('')
+    + '<span><i style="background:var(--none)"></i>not run</span>'
+    + '<span><i style="outline:2px solid #862e9c;background:var(--bad)"></i>environment outage</span>';
+}
+
+function spark(row, env) {
+  const cells = row.cells.map((st, i) => {
+    const suite = data.suites[i] || {};
+    const when = (suite.createdOn || '').replace('T', ' ').slice(0, 16);
+    const title = `${when} · ${st || 'not run'}${env.has(i) ? ' · every test case failed' : ''}`;
+    const box = `<i class="${st || ''}${env.has(i) ? ' env' : ''}" title="${esc(title)}"></i>`;
+    const execId = row.executionIds && row.executionIds[i];
+    // Squash's canonical route (AngularAppPageUrls.EXECUTION); /executions/{id} is only
+    // EXECUTION_LEGACY_LINK.
+    return execId ? `<a href="/squash/execution/${execId}/content" target="_blank">${box}</a>` : box;
+  });
+  return `<div class="spark">${cells.join('')}</div>`;
+}
+
+function exportCsv() {
+  const head = ['Project', 'Campaign', 'Iteration', 'Reference', 'Test case', 'Dataset',
+    'Runs', 'OK', 'Failed', '% OK', 'Trend',
+    ...data.suites.map((s) => (s.createdOn || '').replace('T', ' ').slice(0, 16))];
+  const cell = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const lines = [head.map(cell).join(',')];
+  for (const r of visibleRows()) {
+    lines.push([data.project, data.campaign, data.iteration, r.reference, r.testCase, r.dataset,
+      r.runs, r.ok, r.bad, r.okRate + '%', TREND[r.trend] || r.trend,
+      ...r.cells.map((c) => c || '')].map(cell).join(','));
+  }
+  // The BOM matters: without it Excel reads a UTF-8 CSV in the local ANSI codepage and mangles
+  // every non-ASCII name.
+  const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `iteration-${data.iterationId}-run-history.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+$('reload').onclick = load;
+$('iter').onchange = load;
+$('runs').onchange = load;
+$('onlyBad').onchange = () => { saveState({ onlyBad: $('onlyBad').checked }); if (data) render(); };
+$('fProject').onchange = $('fFolder1').onchange = $('fFolder2').onchange = applyFilters;
+$('fClear').onclick = () => { want = { project: '', folder1: '', folder2: '' }; applyFilters(); };
+$('csv').onclick = exportCsv;
+$('head').onclick = (e) => {
+  const k = e.target.closest('th')?.dataset.k;
+  if (!k || !data) return;
+  sort = { key: k, desc: sort.key === k ? !sort.desc : true };
+  render();
+};
+
+loadIterations().catch((e) => { $('pickHint').textContent = 'could not load the iteration list: ' + e.message; });
+</script>
+</body>
+</html>

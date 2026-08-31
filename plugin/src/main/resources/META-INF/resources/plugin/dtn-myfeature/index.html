@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="vi">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <title>DTN Dashboard — Squash TM plugin</title>
@@ -16,7 +16,7 @@
     display: grid; grid-template-columns: var(--nav-w) 1fr;
   }
 
-  /* ---- sidebar: dựng lại nav-bar của Squash, dùng chính asset của core ---- */
+  /* ---- sidebar: Squash's nav bar rebuilt, reusing core's own assets ---- */
   nav { background: var(--nav); display: flex; flex-direction: column; overflow: hidden; }
   nav .logo { padding: 14px 16px 18px; }
   nav .logo img { height: 26px; width: auto; max-width: 100%; object-fit: contain; display: block; }
@@ -55,7 +55,7 @@
   button:hover { filter: brightness(1.07); }
   pre { background: #11161f; color: #d7e0ef; padding: 14px; border-radius: 6px; overflow: auto; margin: 0; font-size: 12.5px; }
   .muted { color: var(--muted); font-size: 12px; }
-  /* khi bị nhúng trong iframe (nút CONFIGURE của Squash) thì bỏ sidebar đi cho khỏi trùng */
+  /* embedded in an iframe (Squash's CONFIGURE button): drop the sidebar so it is not doubled */
   body.embedded { grid-template-columns: 1fr; }
   body.embedded nav { display: none; }
 </style>
@@ -72,6 +72,7 @@
   <a href="/squash/action-word-workspace"   data-i18n="action-word-workspace"><img src="/squash/action-word-workspace.aa0b5fba3ef274f1.svg" alt="">Action words</a>
   <div class="sep"></div>
   <a href="/squash/plugin/dtn-myfeature/index" class="active"><img src="/squash/custom-report-workspace.58b587b9126c75bb.svg" alt="">DTN Dashboard</a>
+  <a href="/squash/plugin/dtn-myfeature/iteration-report"><img src="/squash/campaign-workspace.eb6fa88822443dd4.svg" alt="">Iteration report</a>
   <div class="spacer"></div>
   <div class="foot">
     <a href="/squash/administration-workspace/projects"><img src="/squash/administration-workspace.2c545be9ad32ef5e.svg" alt="">Administration</a>
@@ -88,13 +89,13 @@
   <div class="body">
     <div class="grid" id="tiles"></div>
     <div class="panel">
-      <h2>Đếm node theo project</h2>
+      <h2>Node count per project</h2>
       <div class="row">
         <input id="pid" type="number" value="1" placeholder="projectId">
-        <button onclick="loadProject()">Đếm</button>
+        <button onclick="loadProject()">Count</button>
         <span id="pres" class="muted"></span>
       </div>
-      <pre id="raw">đang tải…</pre>
+      <pre id="raw">loading…</pre>
     </div>
   </div>
 </main>
@@ -103,16 +104,17 @@
 const BASE = '/squash/plugin/dtn-myfeature/api';
 const TILES = [['projects','Projects'],['testCases','Test cases'],['executions','Executions'],['requirements','Requirements']];
 
-// Bị nhúng trong iframe (nút CONFIGURE của Squash) -> ẩn sidebar để không trùng nav
+// Embedded in an iframe (Squash's CONFIGURE button) -> hide the sidebar so the nav is not doubled
 if (window.self !== window.top) document.body.classList.add('embedded');
 
-// Ngữ cảnh cây mà Squash truyền vào qua ?rows=CampaignLibrary-1
+// The tree context Squash passes in through ?rows=CampaignLibrary-1
 const rows = new URLSearchParams(location.search).get('rows');
-if (rows) document.getElementById('ctx').textContent = 'ngữ cảnh: ' + rows;
+if (rows) document.getElementById('ctx').textContent = 'context: ' + rows;
 
-/** Lấy nhãn menu từ chính i18n của Squash (kể cả custom_translations) để không lệch khi đổi ngôn ngữ. */
+/** Takes the menu labels from Squash's own i18n (custom_translations included) so they follow the
+    language the user picked. */
 async function applyI18n() {
-  // Squash chi ship en/fr/de/es; trang nay lang="vi" nen fallback ve en.
+  // Squash only ships en/fr/de/es; anything else falls back to en.
   const supported = ['en', 'fr', 'de', 'es'];
   const want = (navigator.language || 'en').slice(0, 2);
   const lang = supported.includes(want) ? want : 'en';

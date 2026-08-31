@@ -20,9 +20,11 @@ public class DtnMyFeatureWebMvcConfig implements WebMvcConfigurer {
 
     @Override
     public void addViewControllers(ViewControllerRegistry registry) {
-        // standalone page shipped inside this jar
+        // standalone pages shipped inside this jar
         registry.addViewController("/plugin/dtn-myfeature/index")
                 .setViewName("forward:/plugin/dtn-myfeature/index.html");
+        registry.addViewController("/plugin/dtn-myfeature/iteration-report")
+                .setViewName("forward:/plugin/dtn-myfeature/iteration-report.html");
 
         // page that lives inside the SPA: deep link + F5 must serve the SPA shell
         registry.addViewController("/dtn-dashboard").setViewName(SPA_INDEX);

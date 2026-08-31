@@ -14,3 +14,4 @@ front-patch/build/
 .idea/
 .vscode/
 *.iml
+.playwright-mcp
