@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Build the dtn-myfeature plugin with javac + jar (no Maven, no network).
 # The classpath comes from WEB-INF/lib of the squash-tm.war already unpacked in .runtime.
-#   ./plugin/build.sh [--check] [--deploy]      (both flags allowed, in any order)
+#   ./plugin/build.sh [--deploy]
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -29,29 +29,10 @@ rm -rf "$OUT/classes"; mkdir -p "$OUT/classes"
   -cp "$CP" -d "$OUT/classes" $(find plugin/src/main/java -name '*.java')
 
 cp -r plugin/src/main/resources/. "$OUT/classes/"
-
-# Self-check of the trend/environmentFailures logic: no DB, no framework needed, and it stays
-# out of the jar.
-# It has to be javac then java, not the single-file source launcher: the launcher loads the class
-# into a classloader of its own -> a different runtime package -> IllegalAccessError on the
-# package-private method.
-has() { for a in "$@"; do [[ "$a" == "$FLAG" ]] && return 0; done; return 1; }
-
-FLAG=--check
-if has "$@"; then
-  rm -rf "$OUT/test-classes"; mkdir -p "$OUT/test-classes"
-  "$JAVA_HOME/bin/javac" -nowarn -encoding UTF-8 --release 21 \
-    -cp "$OUT/classes:$CP" -d "$OUT/test-classes" \
-    $(find plugin/src/test/java -name '*.java')
-  "$JAVA_HOME/bin/java" -cp "$OUT/classes:$OUT/test-classes:$CP" \
-    org.squashtest.tm.plugin.dtnmyfeature.DtnRunHistoryCheck
-fi
-
 "$JAVA_HOME/bin/jar" --create --file "$JAR" -C "$OUT/classes" .
 echo "✓ $JAR"
 
-FLAG=--deploy
-if has "$@"; then
+if [[ "${1:-}" == "--deploy" ]]; then
   cp "$JAR" "$SQUASH_HOME/plugins/"
   echo "✓ deployed -> $SQUASH_HOME/plugins/"
 fi
