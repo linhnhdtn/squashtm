@@ -31,7 +31,6 @@ public class DtnMyFeatureController {
 
     private static final int MAX_SUGGESTIONS = 15;
 
-
     @PersistenceContext private EntityManager em;
 
     @GetMapping("/summary")

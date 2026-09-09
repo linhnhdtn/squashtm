@@ -8,7 +8,7 @@ cd "$ROOT"; set -a; . ./.env; set +a
 WAR="$ROOT/.runtime/squash-tm/bundles/squash-tm.war"
 # custom.js gio chi con badge + autocomplete, deu doi DOM cua Angular nen defer la dung.
 # (Phan report -- can chay TRUOC Angular, tuc KHONG defer -- da tach sang plugin rieng
-#  squashtm-report, va build.sh cua plugin do tu chen the script cua no.)
+#  squashtm-report, va build.sh --install cua plugin do tu chen the script cua no.)
 INJECT='<script src="plugin/dtn-myfeature/custom.js" defer></script>'
 MARKER='plugin/dtn-myfeature/custom.js'
 

@@ -15,3 +15,9 @@ front-patch/build/
 .vscode/
 *.iml
 .playwright-mcp
+
+# DB dump lay tu production, 226M -- khong day vao git
+*.sql.gz
+
+# CodeGraph index (may cua tung nguoi)
+.codegraph/
